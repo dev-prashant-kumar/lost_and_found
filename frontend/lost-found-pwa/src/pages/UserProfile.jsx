@@ -1,192 +1,300 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import ItemCard from "../components/ItemCard";
+import { useNavigate } from "react-router-dom";
 
 export default function UserProfile() {
+
+  const navigate = useNavigate();
+
   const [user, setUser] = useState(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [formData, setFormData] = useState({ name: "", address: "", phone: "" });
-  const [error, setError] = useState(null);
-  const [itemsLoading, setItemsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchProfileAndItems = async () => {
-      try {
-        setLoading(true);
+  const [toast, setToast] = useState({ show:false, message:"" });
 
-        // 1️⃣ Get logged-in user
-        const { data: authData, error: authError } = await supabase.auth.getUser();
-        if (authError || !authData.user) throw new Error("No user logged in");
+  const [formData, setFormData] = useState({
+    name:"",
+    address:"",
+    phone:""
+  });
 
-        const userId = authData.user.id;
+  // ================= TOAST =================
+  const triggerToast = (message)=>{
+    setToast({show:true,message});
+    setTimeout(()=>setToast({show:false,message:""}),2500);
+  };
 
-        // 2️⃣ Fetch profile from profiles table
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", userId)
-          .single();
-        if (profileError) throw profileError;
+  // ================= LOAD PROFILE =================
+  const loadProfile = async () => {
 
-        setUser(profileData);
-        setFormData({
-          name: profileData.name || "",
-          address: profileData.address || "",
-          phone: profileData.phone || "",
-        });
+    const { data:{ user:authUser } } =
+      await supabase.auth.getUser();
 
-        // 3️⃣ Fetch items for this user
-        setItemsLoading(true);
-        const { data: itemsData, error: itemsError } = await supabase
-          .from("items")
-          .select("*")
-          .eq("user_id", userId)
-          .order("created_at", { ascending: false })
-          .limit(12);
-        if (itemsError) throw itemsError;
+    if(!authUser) return;
 
-        setItems(itemsData || []);
-      } catch (err) {
-        console.error(err.message);
-        setError("Failed to load profile or items");
-      } finally {
-        setLoading(false);
-        setItemsLoading(false);
-      }
+    const { data:profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id",authUser.id)
+      .single();
+
+    setUser(profile);
+
+    setFormData({
+      name:profile.name || "",
+      address:profile.address || "",
+      phone:profile.phone || ""
+    });
+
+    const { data:userItems } = await supabase
+      .from("items")
+      .select(`
+        *,
+        profiles ( avatar_url, name )
+      `)
+      .eq("user_id",authUser.id)
+      .order("created_at",{ascending:false});
+
+    setItems(userItems || []);
+  };
+
+  // ================= INIT + REALTIME =================
+  useEffect(()=>{
+
+    const init = async ()=>{
+      setLoading(true);
+      await loadProfile();
+      setLoading(false);
     };
 
-    fetchProfileAndItems();
-  }, []);
+    init();
 
-  const handleProfilePicChange = async (e) => {
+    // 🔥 LIVE PROFILE SYNC
+    const channel = supabase
+      .channel("profile-live")
+      .on(
+        "postgres_changes",
+        {
+          event:"UPDATE",
+          schema:"public",
+          table:"profiles",
+        },
+        payload=>{
+          setUser(payload.new);
+        }
+      )
+      .subscribe();
+
+    return ()=> supabase.removeChannel(channel);
+
+  },[]);
+
+  // ================= AVATAR UPLOAD =================
+  const handleProfilePicChange = async(e)=>{
     const file = e.target.files[0];
-    if (!file) return;
-    setUploading(true);
-    try {
-      const fileName = `avatars/${user.id}-${Date.now()}`;
-      const { error: uploadError } = await supabase.storage.from("avatars").upload(fileName, file, { upsert: true });
-      if (uploadError) throw uploadError;
+    if(!file || !user) return;
 
-      const { publicUrl, error: urlError } = supabase.storage.from("avatars").getPublicUrl(fileName);
-      if (urlError) throw urlError;
+    try{
+      setUploading(true);
 
-      await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id);
-      setUser({ ...user, avatar_url: publicUrl });
-    } catch (err) {
-      console.error(err.message);
-      setError("Failed to upload profile picture");
-    } finally {
+      const fileExt = file.name.split(".").pop();
+      const filePath = `${user.id}.${fileExt}`;
+
+      await supabase.storage
+        .from("avatars")
+        .upload(filePath,file,{upsert:true});
+
+      const { data } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
+
+      const publicUrl = data.publicUrl;
+
+      await supabase
+        .from("profiles")
+        .update({ avatar_url:publicUrl })
+        .eq("id",user.id);
+
+      await loadProfile();
+
+      triggerToast("🔥 Profile picture updated");
+
+    }catch(err){
+      console.log(err);
+      alert("Upload failed");
+    }
+    finally{
       setUploading(false);
     }
   };
 
-  const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-
-  const handleUpdate = async () => {
-    try {
-      setLoading(true);
-      const { error } = await supabase.from("profiles").update(formData).eq("id", user.id);
-      if (error) throw error;
-      setUser({ ...user, ...formData });
-      setEditMode(false);
-    } catch (err) {
-      console.error(err.message);
-      setError("Failed to update profile");
-    } finally {
-      setLoading(false);
-    }
+  // ================= UPDATE PROFILE =================
+  const handleInputChange = (e)=>{
+    setFormData({...formData,[e.target.name]:e.target.value});
   };
 
-  const handleDeletePost = async (itemId) => {
-    if (!confirm("Are you sure you want to delete this item?")) return;
-    try {
-      await supabase.from("items").delete().eq("id", itemId);
-      setItems(items.filter((i) => i.id !== itemId));
-    } catch (err) {
-      console.error(err.message);
-      alert("Failed to delete item");
-    }
+  const handleUpdate = async()=>{
+    await supabase
+      .from("profiles")
+      .update(formData)
+      .eq("id",user.id);
+
+    await loadProfile();
+    setEditMode(false);
+
+    triggerToast("✅ Profile updated successfully");
   };
 
-  const handleEditPost = (item) => {
-    alert("Edit post feature not implemented yet");
+  // ================= DELETE =================
+  const handleDeletePost = async(id)=>{
+    if(!window.confirm("Delete post?")) return;
+
+    await supabase.from("items").delete().eq("id",id);
+    setItems(prev=>prev.filter(i=>i.id!==id));
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">Loading profile...</div>;
-  if (error) return <div className="min-h-screen flex items-center justify-center bg-gray-900 text-red-500">{error}</div>;
+  const handleEditPost = (id)=>{
+    navigate(`/edit-item/${id}`);
+  };
 
-  const skeletons = Array.from({ length: 6 });
+  // ================= LOADING =================
+  if(loading)
+    return <div className="min-h-screen bg-gray-900 animate-pulse"></div>;
 
-  return (
-    <div className="min-h-screen w-full bg-gray-900 text-white p-6 flex flex-col items-center gap-8">
-      {/* Profile Card */}
-      <div className="bg-gray-800 rounded-xl p-8 w-full max-w-6xl shadow-lg flex flex-col md:flex-row gap-8">
-        {/* Left: Avatar */}
-        <div className="flex flex-col items-center md:w-1/3">
-          <div className="relative">
-            <div className="w-40 h-40 rounded-full border-4 border-orange-500 p-1">
-              <img
-                src={user.avatar_url || "/default-avatar.png"}
-                alt="Profile"
-                className="w-full h-full rounded-full object-cover"
-              />
-            </div>
-            <label className="absolute bottom-0 right-0 bg-orange-500 text-white p-2 rounded-full cursor-pointer hover:bg-orange-600">
-              <input type="file" accept="image/*" className="hidden" onChange={handleProfilePicChange} />
-              {uploading ? "..." : "✏️"}
-            </label>
-          </div>
-        </div>
+  // ================= UI =================
+  return(
+  <div className="min-h-screen bg-gray-900 text-white p-4 md:p-6 flex flex-col gap-8 items-center">
 
-        {/* Right: User Info */}
-        <div className="md:w-2/3 flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-3xl font-bold">{user.name || user.email}</h2>
-            <button onClick={() => setEditMode(!editMode)} className="bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded font-semibold text-white">
-              {editMode ? "Cancel" : "Edit Profile"}
-            </button>
-          </div>
+    {/* PROFILE CARD */}
+    <div className="bg-gray-800 p-6 md:p-8 rounded-2xl w-full max-w-6xl flex flex-col md:flex-row gap-8 items-center">
 
-          {editMode ? (
-            <div className="flex flex-col gap-4">
-              <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="Full Name" className="w-full p-3 rounded bg-gray-700 text-white" />
-              <input type="text" name="address" value={formData.address} onChange={handleInputChange} placeholder="Address" className="w-full p-3 rounded bg-gray-700 text-white" />
-              <input type="text" name="phone" value={formData.phone} onChange={handleInputChange} placeholder="Phone" className="w-full p-3 rounded bg-gray-700 text-white" />
-              <button onClick={handleUpdate} className="bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded font-semibold text-white">Save Changes</button>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <p><span className="font-semibold">Full Name:</span> {user.name || "-"}</p>
-              <p><span className="font-semibold">Email:</span> {user.email}</p>
-              <p><span className="font-semibold">Phone:</span> {user.phone || "-"}</p>
-              <p><span className="font-semibold">Address:</span> {user.address || "-"}</p>
-            </div>
-          )}
-        </div>
+      {/* AVATAR */}
+      <div className="relative">
+
+        <img
+          src={
+            user.avatar_url
+              ? `${user.avatar_url}?t=${Date.now()}`
+              : "/default-avatar.png"
+          }
+          className="
+            w-32 h-32 md:w-40 md:h-40
+            rounded-full object-cover
+            border-4 border-orange-500
+          "
+        />
+
+        {/* Upload Ring */}
+        {uploading && (
+          <div className="absolute inset-0 rounded-full border-4 border-orange-400 animate-spin border-t-transparent"></div>
+        )}
+
+        <label className="
+          absolute bottom-0 right-0
+          bg-orange-500 hover:bg-orange-600
+          p-2 rounded-full cursor-pointer
+          transition
+        ">
+          <input hidden type="file" onChange={handleProfilePicChange}/>
+          ✏️
+        </label>
+
       </div>
 
-      {/* Recent Items */}
-      <div className="w-full max-w-6xl flex flex-col gap-4">
-        <h3 className="text-2xl font-bold mb-2">Recent Items</h3>
-        <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {itemsLoading
-            ? skeletons.map((_, idx) => <div key={idx} className="bg-gray-700 rounded-lg p-4 animate-pulse h-60"></div>)
-            : items.length === 0
-            ? <p className="text-gray-400 col-span-full">No items reported yet!</p>
-            : items.map((item) => (
-                <div key={item.id} className="relative">
-                  <ItemCard item={item} />
-                  <div className="absolute top-2 right-2 flex gap-1">
-                    <button onClick={() => handleEditPost(item)} className="bg-orange-500 px-2 py-1 rounded text-sm text-white hover:bg-orange-600">Edit</button>
-                    <button onClick={() => handleDeletePost(item.id)} className="bg-red-500 px-2 py-1 rounded text-sm text-white hover:bg-red-600">Delete</button>
-                  </div>
-                </div>
-              ))}
+      {/* INFO */}
+      <div className="flex-1 space-y-3 w-full">
+
+        <div className="flex justify-between flex-wrap gap-2">
+          <h2 className="text-2xl md:text-3xl font-bold">
+            {user.name || user.email}
+          </h2>
+
+          <button
+            onClick={()=>setEditMode(!editMode)}
+            className="
+              bg-orange-500 hover:bg-orange-600
+              px-4 py-2 text-sm
+              rounded-full transition
+            ">
+            {editMode ? "Cancel" : "Edit"}
+          </button>
         </div>
+
+        {editMode ? (
+          <>
+            <input name="name" value={formData.name}
+              onChange={handleInputChange}
+              className="p-2 bg-gray-700 rounded w-full"/>
+
+            <input name="address" value={formData.address}
+              onChange={handleInputChange}
+              className="p-2 bg-gray-700 rounded w-full"/>
+
+            <input name="phone" value={formData.phone}
+              onChange={handleInputChange}
+              className="p-2 bg-gray-700 rounded w-full"/>
+
+            <button
+              onClick={handleUpdate}
+              className="bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-full">
+              Save
+            </button>
+          </>
+        ):(
+          <>
+            <p>Email: {user.email}</p>
+            <p>Phone: {user.phone || "-"}</p>
+            <p>Address: {user.address || "-"}</p>
+          </>
+        )}
       </div>
     </div>
+
+    {/* POSTS */}
+    <div className="w-full max-w-6xl">
+      <h3 className="text-2xl font-bold mb-4">Your Posts</h3>
+
+      <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+
+        {items.map(item=>(
+          <div key={item.id} className="relative">
+
+            <ItemCard item={item}/>
+
+            <div className="absolute top-2 right-2 flex gap-2">
+              <button
+                onClick={()=>handleEditPost(item.id)}
+                className="bg-orange-500 text-xs px-3 py-1 rounded-full">
+                Edit
+              </button>
+
+              <button
+                onClick={()=>handleDeletePost(item.id)}
+                className="bg-red-500 text-xs px-3 py-1 rounded-full">
+                Delete
+              </button>
+            </div>
+
+          </div>
+        ))}
+
+      </div>
+    </div>
+
+    {/* TOAST */}
+    <div className={`
+      fixed bottom-6 left-1/2 -translate-x-1/2
+      transition-all duration-500
+      ${toast.show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}
+    `}>
+      <div className="bg-white/10 backdrop-blur-lg px-6 py-3 rounded-full shadow-xl">
+        {toast.message}
+      </div>
+    </div>
+
+  </div>
   );
 }
