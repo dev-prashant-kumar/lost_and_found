@@ -114,6 +114,13 @@ export default function Navbar({ user }) {
               Report Item
             </button>
 
+            {/* ✅ Verify Item Button */}
+            <button
+              className="bg-green-600 px-3 py-1 rounded hover:bg-green-700 text-sm font-bold select-none"
+              onClick={() => navigate("/profile")}            >
+              Verify Item
+            </button>
+
             {/* USER PROFILE */}
             {user && (
               <div className="ml-3 flex items-center gap-2 relative select-none">
@@ -222,6 +229,14 @@ export default function Navbar({ user }) {
           <button className="block w-full text-left px-2 py-1 hover:bg-gray-700 rounded font-bold select-none" onClick={() => {navigate("/lost-items");setIsMobileMenuOpen(false);}}>Lost Items</button>
           <button className="block w-full text-left px-2 py-1 hover:bg-gray-700 rounded font-bold select-none" onClick={() => {navigate("/found-items");setIsMobileMenuOpen(false);}}>Found Items</button>
           <button className="block w-full text-left px-2 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm font-bold select-none" onClick={() => {navigate("/report");setIsMobileMenuOpen(false);}}>Report Item</button>
+
+          {/* ✅ Mobile Verify Item */}
+          <button
+            className="block w-full text-left px-2 py-1 bg-green-600 rounded hover:bg-green-700 text-sm font-bold select-none"
+            onClick={() => {navigate("/profile");setIsMobileMenuOpen(false);}}          >
+            Verify Item
+          </button>
+
           <button className="block w-full text-left px-2 py-1 hover:bg-gray-700 rounded font-bold select-none" onClick={() => {navigate("/profile");setIsMobileMenuOpen(false);}}>View Profile</button>
           {user && (
             <button className="bg-red-600 px-3 py-1 rounded hover:bg-red-700 text-sm font-bold select-none mt-3" onClick={handleLogout}>Logout</button>
