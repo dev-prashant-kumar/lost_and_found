@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import ItemCard from "./ItemCard";
 
-export default function RecentFoundItems() {
+export default function RecentFoundItems({ searchQuery }) {
 
   const [foundItems, setFoundItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,12 +23,22 @@ export default function RecentFoundItems() {
       if (!error) setFoundItems(data);
 
       setLoading(false);
-
     };
 
     fetchItems();
 
   }, []);
+
+  /* ================= FILTER ITEMS ================= */
+
+  const filteredItems = foundItems.filter((item) => {
+    if (!searchQuery) return true;
+
+    return (
+      item.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
 
   /* ================= AUTO SLIDE ================= */
 
@@ -103,15 +113,10 @@ export default function RecentFoundItems() {
       {/* ===== TITLE ===== */}
 
       <div className="text-center mb-12">
-
         <h2 className="group text-3xl font-bold text-white inline-block relative">
-
           Recent Found Items
-
           <span className="absolute left-1/2 -bottom-3 h-[3px] w-0 bg-lime-400 transition-all duration-500 group-hover:w-40 group-hover:-translate-x-1/2"></span>
-
         </h2>
-
       </div>
 
       <div className="max-w-7xl mx-auto px-4">
@@ -121,35 +126,33 @@ export default function RecentFoundItems() {
           className="flex gap-8 overflow-x-auto scroll-smooth scrollbar-hide pb-6"
         >
 
-          {/* ===== SKELETON LOADING ===== */}
-
           {loading ? (
 
             [...Array(3)].map((_, index) => (
-
               <div
                 key={index}
                 className="flex-shrink-0 w-full sm:w-[48%] lg:w-[31%]"
               >
-
                 <div className="bg-gray-800 rounded-xl h-[260px] animate-pulse"></div>
-
               </div>
-
             ))
 
-          ) : (
+          ) : filteredItems.length > 0 ? (
 
-            foundItems.map((item) => (
-
+            filteredItems.map((item) => (
               <div
                 key={item.id}
                 className="flex-shrink-0 w-full sm:w-[48%] lg:w-[31%]"
               >
                 <ItemCard item={item} />
               </div>
-
             ))
+
+          ) : (
+
+            <p className="text-gray-400 text-center w-full">
+              No items found 😔
+            </p>
 
           )}
 
@@ -158,7 +161,5 @@ export default function RecentFoundItems() {
       </div>
 
     </section>
-
   );
-
 }

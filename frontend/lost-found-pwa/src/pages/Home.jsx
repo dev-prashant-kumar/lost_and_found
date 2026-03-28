@@ -11,6 +11,8 @@ import Footer from "../components/Footer";
 
 export default function Home() {
   const [user, setUser] = useState(null);
+  const [searchQuery, setSearchQuery] = useState(""); // ✅ search state
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,13 +28,15 @@ export default function Home() {
     <div className="min-h-screen bg-gray-900 text-white font-sans">
       <Navbar user={user} />
       <Hero />
-      <SearchBar />
+
+      {/* ✅ pass search function */}
+      <SearchBar setSearchQuery={setSearchQuery} />
 
       {/* Lost Items Section */}
-      <RecentLostItems />
+      <RecentLostItems searchQuery={searchQuery} />
 
       {/* Found Items Section */}
-      <RecentFoundItems />
+      <RecentFoundItems searchQuery={searchQuery} />
 
       <Footer />
     </div>
