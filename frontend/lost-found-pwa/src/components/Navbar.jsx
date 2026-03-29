@@ -98,16 +98,23 @@ export default function Navbar({ user }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20 md:h-[70px]">
 
-          {/* LOGO */}
+          {/* ✅ NEW IMAGE LOGO */}
           <div
-            className="flex items-center gap-2 text-2xl font-bold cursor-pointer group"
+            className="flex items-center gap-3 cursor-pointer group"
             onClick={() => navigate("/home")}
           >
-            <span className="text-green-400 text-xl transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110">
-              🔍
-            </span>
+            <img
+              src="https://ixexerxfjbbkidcqafpw.supabase.co/storage/v1/object/public/assets/footer.png.png"
+              alt="Lost & Found Logo"
+              className="
+                h-10 w-auto
+                md:h-11
+                transition-transform duration-300
+                group-hover:scale-110
+              "
+            />
 
-            <span className="relative">
+            <span className="relative text-xl md:text-2xl font-bold">
               Lost & Found
               <span className="absolute left-0 -bottom-1 w-0 h-[2px] bg-green-400 group-hover:w-full transition-all duration-300"></span>
             </span>
@@ -142,7 +149,7 @@ export default function Navbar({ user }) {
         </div>
       </div>
 
-      {/* Styles (unchanged) */}
+      {/* Styles */}
       <style>
         {`
           .shadow-tube {

@@ -42,9 +42,9 @@ export default function Hero() {
 
   return (
     <section
-      ref={containerRef}
-      className="relative overflow-hidden bg-gray-900 text-white pt-28 md:pt-36 pb-20 px-6"
-    >
+  ref={containerRef}
+  className="relative overflow-hidden bg-gray-900 text-white pt-28 md:pt-36 pb-20 px-6 select-none cursor-default"
+>
       <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
 
         {/* LEFT SIDE */}
@@ -69,7 +69,7 @@ export default function Hero() {
                 delay: 120,
                 deleteSpeed: 80,
                 pauseFor: 2500,
-                cursor: "|",
+                cursor: ".",
               }}
             />
           </h1>

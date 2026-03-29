@@ -3,17 +3,13 @@ import { supabase } from "../supabaseClient";
 import ItemCard from "./ItemCard";
 
 export default function RecentLostItems() {
-
   const [lostItems, setLostItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const sliderRef = useRef(null);
 
   /* ================= FETCH ITEMS ================= */
-
   useEffect(() => {
-
     const fetchItems = async () => {
-
       const { data, error } = await supabase
         .from("items")
         .select("*")
@@ -21,45 +17,27 @@ export default function RecentLostItems() {
         .order("created_at", { ascending: false });
 
       if (!error) setLostItems(data);
-
       setLoading(false);
     };
-
     fetchItems();
-
   }, []);
 
   /* ================= AUTO SLIDE ================= */
-
   useEffect(() => {
-
     const slider = sliderRef.current;
-
     const autoSlide = setInterval(() => {
-
       if (!slider) return;
-
-      slider.scrollBy({
-        left: 320,
-        behavior: "smooth"
-      });
-
+      slider.scrollBy({ left: 320, behavior: "smooth" });
       if (slider.scrollLeft + slider.clientWidth >= slider.scrollWidth) {
         slider.scrollTo({ left: 0, behavior: "smooth" });
       }
-
     }, 4000);
-
     return () => clearInterval(autoSlide);
-
   }, []);
 
   /* ================= DRAG SCROLL ================= */
-
   useEffect(() => {
-
     const slider = sliderRef.current;
-
     let isDown = false;
     let startX;
     let scrollLeft;
@@ -69,10 +47,8 @@ export default function RecentLostItems() {
       startX = e.pageX - slider.offsetLeft;
       scrollLeft = slider.scrollLeft;
     };
-
-    const mouseLeave = () => { isDown = false };
-    const mouseUp = () => { isDown = false };
-
+    const mouseLeave = () => (isDown = false);
+    const mouseUp = () => (isDown = false);
     const mouseMove = (e) => {
       if (!isDown) return;
       e.preventDefault();
@@ -92,71 +68,68 @@ export default function RecentLostItems() {
       slider.removeEventListener("mouseup", mouseUp);
       slider.removeEventListener("mousemove", mouseMove);
     };
-
   }, []);
 
   return (
+    <section className="relative mt-[50px] p-2 md:p-4 bg-gray-900 select-none cursor-default overflow-hidden border-[0.5px] border-lime-400/50 rounded-xl animate-neon-border">
+      {/* ===== MODERN TITLE STYLE ===== */}
+      <div className="text-center mb-8 md:mb-12">
+        <div className="inline-block relative group">
+          <h2 className="text-xl sm:text-2xl md:text-4xl font-black text-white tracking-tight transition-colors duration-300 group-hover:text-lime-400">
+            Recent Lost Items
+          </h2>
 
-    <section className="py-20 bg-gray-900">
+          {/* Animated Underline */}
+          <div className="relative mt-1 h-1 w-24 sm:w-28 mx-auto overflow-hidden rounded-full bg-gray-800">
+            <div className="absolute top-0 left-0 h-full w-full bg-gradient-to-r from-lime-500 via-emerald-400 to-lime-500 -translate-x-full transition-transform duration-700 ease-out group-hover:translate-x-0"></div>
+          </div>
 
-      {/* TITLE */}
-      <div className="text-center mb-12">
-
-        <h2 className="group text-3xl font-bold text-white inline-block relative">
-
-          Recent Lost Items
-
-          <span className="absolute left-1/2 -bottom-3 h-[3px] w-0 bg-lime-400 transition-all duration-500 group-hover:w-40 group-hover:-translate-x-1/2"></span>
-
-        </h2>
-
+          {/* Glow Backdrop */}
+          <span className="absolute -inset-x-4 -inset-y-2 z-[-1] scale-90 bg-lime-500/0 opacity-0 blur-2xl transition-all duration-500 group-hover:scale-110 group-hover:bg-lime-500/10 group-hover:opacity-100"></span>
+        </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4">
-
+      <div className="max-w-7xl mx-auto px-2 md:px-4">
         <div
           ref={sliderRef}
-          className="flex gap-8 overflow-x-auto scroll-smooth scrollbar-hide pb-6"
+          className="flex gap-4 sm:gap-6 overflow-x-auto scroll-smooth scrollbar-hide pb-6 cursor-grab active:cursor-grabbing"
         >
-
-          {/* ===== SKELETON LOADING ===== */}
-
-          {loading ? (
-
-            [...Array(3)].map((_, index) => (
-
-              <div
-                key={index}
-                className="flex-shrink-0 w-full sm:w-[48%] lg:w-[31%]"
-              >
-
-                <div className="bg-gray-800 rounded-xl h-[260px] animate-pulse"></div>
-
-              </div>
-
-            ))
-
-          ) : (
-
-            lostItems.map((item) => (
-
-              <div
-                key={item.id}
-                className="flex-shrink-0 w-full sm:w-[48%] lg:w-[31%]"
-              >
-                <ItemCard item={item} />
-              </div>
-
-            ))
-
-          )}
-
+          {loading
+            ? [...Array(3)].map((_, index) => (
+                <div
+                  key={index}
+                  className="flex-shrink-0 w-full sm:w-[48%] lg:w-[31%]"
+                >
+                  <div className="bg-gray-800 rounded-xl h-[260px] animate-pulse"></div>
+                </div>
+              ))
+            : lostItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex-shrink-0 w-full sm:w-[48%] lg:w-[31%]"
+                >
+                  <ItemCard item={item} />
+                </div>
+              ))}
         </div>
-
       </div>
 
+      {/* ================== NEON BORDER ANIMATION ================== */}
+      <style>
+        {`
+          @keyframes neon-border {
+            0% { border-color: #84cc16; }
+            25% { border-color: #22d3ee; }
+            50% { border-color: #4ade80; }
+            75% { border-color: #84cc16; }
+            100% { border-color: #22d3ee; }
+          }
+
+          .animate-neon-border {
+            animation: neon-border 3s infinite linear;
+          }
+        `}
+      </style>
     </section>
-
   );
-
 }
