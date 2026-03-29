@@ -2,17 +2,14 @@ import React, { useRef, useState, useEffect } from "react";
 import Typewriter from "typewriter-effect";
 import { Link } from "react-router-dom";
 
-
 export default function Hero() {
 
-  // ✅ video reference
   const videoRef = useRef(null);
   const containerRef = useRef(null);
-  
 
   const [isMuted, setIsMuted] = useState(true);
 
-  // ✅ Toggle sound (Instagram style)
+  // ✅ Toggle sound
   const toggleSound = () => {
     const video = videoRef.current;
     if (!video) return;
@@ -21,7 +18,7 @@ export default function Hero() {
     setIsMuted(video.muted);
   };
 
-  // ✅ Netflix-style auto pause/play on scroll
+  // ✅ Auto play/pause on scroll
   useEffect(() => {
     const video = videoRef.current;
     const section = containerRef.current;
@@ -36,23 +33,21 @@ export default function Hero() {
           video.pause();
         }
       },
-      { threshold: 0.4 } // play when 40% visible
+      { threshold: 0.4 }
     );
 
     observer.observe(section);
-
     return () => observer.disconnect();
   }, []);
-  
+
   return (
-    
-          <section 
-        ref={containerRef}
-        className="relative overflow-hidden bg-gray-900 text-white pt-28 md:pt-36 pb-20 px-6"
->
+    <section
+      ref={containerRef}
+      className="relative overflow-hidden bg-gray-900 text-white pt-28 md:pt-36 pb-20 px-6"
+    >
       <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
 
-        {/* LEFT SIDE — TEXT */}
+        {/* LEFT SIDE */}
         <div className="text-center md:text-left">
           <p className="text-blue-400 mb-3 text-sm tracking-wide">
             Smart Community Recovery Platform
@@ -79,26 +74,61 @@ export default function Hero() {
             />
           </h1>
 
-          <p className="text-gray-300 mb-8 max-w-lg">
+          {/* ✅ Hidden on mobile, visible on PC */}
+          <p className="hidden md:block text-gray-300 mb-8 max-w-lg">
             Report lost items, connect with finders, and recover belongings
             through a trusted and secure community platform.
           </p>
 
-          {/* BUTTONS */}
+          {/* ✅ NEON BUTTONS */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
 
+            {/* REPORT BUTTON */}
             <Link
               to="/report"
-              className="bg-blue-600 px-7 py-3 rounded-lg font-medium hover:bg-blue-700 transition duration-300 shadow-lg text-center"
+              className="
+                relative px-7 py-3 rounded-lg font-medium text-center
+                bg-blue-600/90
+                transition duration-300
+                hover:scale-105
+                shadow-[0_0_15px_rgba(59,130,246,0.5)]
+                hover:shadow-[0_0_35px_rgba(59,130,246,0.9)]
+              "
             >
-              Report Lost Item
+              <span className="relative z-10">
+                Report Lost Item
+              </span>
+
+              {/* neon glow */}
+              <span className="
+                absolute inset-0 rounded-lg
+                bg-blue-500 blur-xl opacity-20
+                animate-pulse
+              "></span>
             </Link>
 
+            {/* FIND BUTTON */}
             <Link
               to="/found-items"
-              className="border border-gray-500 px-7 py-3 rounded-lg font-medium hover:bg-gray-800 transition duration-300 text-center"
+              className="
+                relative px-7 py-3 rounded-lg font-medium text-center
+                border border-gray-500
+                transition duration-200
+                hover:scale-105
+                hover:border-cyan-300
+                shadow-[0_0_10px_rgba(34,211,238,0.3)]
+                hover:shadow-[0_0_30px_rgba(34,211,238,0.8)]
+              "
             >
-              Find Your Item
+              <span className="relative z-10">
+                Find Your Item
+              </span>
+
+              <span className="
+                absolute inset-0 rounded-lg
+                bg-cyan-600 blur-xl opacity-20
+                animate-pulse
+              "></span>
             </Link>
 
           </div>
@@ -111,7 +141,7 @@ export default function Hero() {
           </div>
         </div>
 
-        {/* RIGHT SIDE — HERO VIDEO */}
+        {/* RIGHT SIDE VIDEO */}
         <div className="relative">
 
           <video
@@ -130,28 +160,19 @@ export default function Hero() {
             />
           </video>
 
-          {/* 🔊 Sound Button — fixed to video frame */}
+          {/* SOUND BUTTON */}
           <button
             onClick={toggleSound}
             className="
-              absolute
-              bottom-0
-              right-0
-              z-10
-              bg-black/60
-              backdrop-blur
-              px-4
-              py-1
-              rounded-full
-              text-white
-              hover:bg-black/80
-              transition
+              absolute bottom-0 right-0 z-10
+              bg-black/60 backdrop-blur
+              px-4 py-1 rounded-full text-white
+              hover:bg-black/80 transition
             "
           >
             {isMuted ? "🔇" : "🔊"}
           </button>
 
-          {/* soft border glow */}
           <div className="absolute inset-0 rounded-2xl ring-1 ring-white/10 pointer-events-none"></div>
         </div>
 

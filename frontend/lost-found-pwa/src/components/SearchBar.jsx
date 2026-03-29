@@ -1,29 +1,70 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { FaSearch } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../supabaseClient";
 
 export default function SearchBar() {
   const [query, setQuery] = useState("");
-  const navigate = useNavigate();
+  const [suggestions, setSuggestions] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
 
-  // 🔎 Handle Search
+  const navigate = useNavigate();
+  const wrapperRef = useRef(null);
+
+  /* ================= LIVE SEARCH SUGGESTIONS ================= */
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (!query.trim()) {
+        setSuggestions([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("items")
+        .select("id, name, description")
+        .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
+        .limit(5);
+
+      if (!error) setSuggestions(data || []);
+    };
+
+    const debounce = setTimeout(fetchSuggestions, 350);
+    return () => clearTimeout(debounce);
+  }, [query]);
+
+  /* ================= CLOSE DROPDOWN OUTSIDE CLICK ================= */
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!wrapperRef.current?.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () =>
+      document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  /* ================= SEARCH ================= */
+
   const handleSearch = () => {
     if (!query.trim()) return;
 
-    // send query to Found Items page
     navigate(`/found-items?search=${encodeURIComponent(query)}`);
+    setShowDropdown(false);
   };
 
-  // 🔎 Enter key search
   const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      handleSearch();
-    }
+    if (e.key === "Enter") handleSearch();
   };
+
+  /* ================= UI ================= */
 
   return (
     <section className="py-6 md:py-16 px-4">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-3xl mx-auto" ref={wrapperRef}>
 
         {/* 🔍 Search Container */}
         <div className="relative group">
@@ -60,7 +101,10 @@ export default function SearchBar() {
               type="text"
               placeholder="Search lost or found items..."
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setShowDropdown(true);
+              }}
               onKeyDown={handleKeyDown}
               className="
                 flex-1 px-3 py-3 md:py-4
@@ -86,9 +130,44 @@ export default function SearchBar() {
               Search
             </button>
           </div>
+
+          {/* ✅ LIVE DROPDOWN (NEW FEATURE — DESIGN SAFE) */}
+          {showDropdown && suggestions.length > 0 && (
+            <div
+              className="
+                absolute w-full mt-2 z-50
+                bg-gray-900/95 backdrop-blur-xl
+                border border-white/10
+                rounded-xl overflow-hidden
+                shadow-xl
+              "
+            >
+              {suggestions.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() =>
+                    navigate(
+                      `/found-items?search=${encodeURIComponent(item.name)}`
+                    )
+                  }
+                  className="
+                    px-4 py-3 cursor-pointer
+                    hover:bg-white/10 transition
+                  "
+                >
+                  <p className="text-white text-sm font-medium">
+                    {item.name}
+                  </p>
+                  <p className="text-gray-400 text-xs truncate">
+                    {item.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* CATEGORY FILTERS */}
+        {/* CATEGORY FILTERS (UNCHANGED ✅) */}
         <div className="mt-4 md:mt-6 flex flex-wrap gap-3 justify-center text-xs md:text-sm">
           {["All", "Mobile", "Wallet", "Keys", "Bag"].map((cat) => (
             <button
