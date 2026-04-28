@@ -106,7 +106,7 @@ export default function Footer() {
       <div className="border-t border-white/10 py-5 px-6 flex items-center justify-center md:justify-between">
 
         <p className="text-sm text-gray-500 text-center">
-          © {new Date().getFullYear()} Lost & Found Platform — Built by Saura 🚀
+          © {new Date().getFullYear()} Lost & Found Platform — 👆 
         </p>
 
         {/* DESKTOP ICONS */}

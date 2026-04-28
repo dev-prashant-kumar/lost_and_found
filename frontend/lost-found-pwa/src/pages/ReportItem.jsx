@@ -127,10 +127,16 @@ export default function ReportItem() {
         contact_name: capitalizeFirstLetter(formData.contactName),
         contact_phone: formData.contactPhone,
         contact_email: formData.contactEmail,
-        questions:
-          formData.type === "found"
-            ? questions.filter((q) => q.trim() !== "")
-            : null,
+       // ✅ FIXED PART
+    question_1:
+      formData.type === "found" && questions[0]
+        ? questions[0]
+        : null,
+
+    question_2:
+      formData.type === "found" && questions[1]
+        ? questions[1]
+        : null,
       },
     ]);
 

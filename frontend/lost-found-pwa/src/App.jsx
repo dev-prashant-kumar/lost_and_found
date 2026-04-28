@@ -11,6 +11,7 @@ import UserProfile from "./pages/UserProfile";
 import ClaimItem from "./pages/ClaimItem";
 import VerifyClaims from "./pages/VerifyClaims";
 import MyClaimStatus from "./pages/MyClaimStatus";
+import EditItem from "./pages/EditItem";
 function App() {
   return (
     <BrowserRouter>
@@ -29,6 +30,7 @@ function App() {
         <Route path="/verify-claims/:itemId" element={<VerifyClaims />} />
         <Route path="/my-claims" element={<MyClaimStatus />} />
         <Route path="/profile" element={<UserProfile />} />
+        <Route path="/edit-item/:id" element={<EditItem />} />
       </Routes>
     </BrowserRouter>
   );
